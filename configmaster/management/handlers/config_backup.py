@@ -128,11 +128,9 @@ class NetworkDeviceConfigBackupHandler(NetworkDeviceHandler):
         :attr:`configmaster.models.Device.last_checksum` field if necessary.
         """
 
-        checksum = self._get_config_checksum()
+        self.checksum = self._get_config_checksum()
 
-        if checksum != self.device.last_checksum:
-            self.device.last_checksum = checksum
-            self.device.save(update_fields=['last_checksum'])
+        if self.checksum != self.device.last_checksum:
             return False
         else:
             return True
@@ -248,6 +246,15 @@ class NetworkDeviceConfigBackupHandler(NetworkDeviceHandler):
                 raw_config = f.read()
             with codecs.open(temp_filename, 'w', encoding="utf8") as f:
                 f.write(raw_config)
+
+    def _return_success(self, message, *args):
+        has_new_checksum = getattr(self, 'checksum', False)
+        if has_new_checksum and self.device.last_checksum != self.checksum:
+                self.device.last_checksum = self.checksum
+                self.device.save(update_fields=['last_checksum'])
+        return super(
+            NetworkDeviceConfigBackupHandler, self
+        )._return_success(message, *args)
 
     def run(self, *args, **kwargs):
         """
